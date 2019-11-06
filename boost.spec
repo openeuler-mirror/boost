@@ -4,8 +4,8 @@
 %global toplev_dirname %{name}_%{version_enc}
 %global sonamever %{version}
 
-%bcond_without mpich
-%bcond_without openmpi
+%bcond_with mpich
+%bcond_with openmpi
 %bcond_without context
 %bcond_without python2
 %bcond_without python3
@@ -21,7 +21,7 @@
 
 Name:           boost
 Version:        1.66.0
-Release:        15
+Release:        16
 Summary:        The free peer-reviewed portable C++ source libraries
 License:        Boost and MIT and Python
 URL:            http://www.boost.org
@@ -466,6 +466,7 @@ This package contains the documentation in the HTML format of the Boost C++
 libraries. The documentation provides the same content as that on the Boost
 web page (http://www.boost.org/doc/libs/%{version_enc}).
 
+%if 0%{with openmpi}
 %package openmpi
 Summary: Run-time component of Boost.MPI library
 BuildRequires: openmpi-devel
@@ -547,7 +548,9 @@ Run-time support for the Parallel BGL graph library.  The interface and
 graph components are generic, in the same sense as the Standard
 Template Library (STL).  This libraries in this package use OpenMPI
 back-end to do the parallel work.
+%endif
 
+%if 0%{with mpich}
 %package mpich
 Summary: Run-time component of Boost.MPI library
 BuildRequires: mpich-devel
@@ -630,6 +633,8 @@ graph components are generic, in the same sense as the Standard
 Template Library (STL).  This libraries in this package use MPICH
 back-end to do the parallel work.
 
+%endif
+
 %package build
 Summary: Cross platform build system for C++ projects
 Requires: boost-jam
@@ -695,7 +700,9 @@ local RPM_OPT_FLAGS = [ os.environ RPM_OPT_FLAGS ] ;
 local RPM_LD_FLAGS = [ os.environ RPM_LD_FLAGS ] ;
 
 using gcc : : : <compileflags>$(RPM_OPT_FLAGS) <linkflags>$(RPM_LD_FLAGS) ;
+%if 0%{with openmpi} || 0%{with mpich}
 using mpi ;
+%endif
 using python : %{python2_version} : /usr/bin/python2 : /usr/include/python%{python2_version} : : : : ;
 EOF
 
@@ -720,7 +727,9 @@ local RPM_OPT_FLAGS = [ os.environ RPM_OPT_FLAGS ] ;
 local RPM_LD_FLAGS = [ os.environ RPM_LD_FLAGS ] ;
 
 using gcc : : : <compileflags>$(RPM_OPT_FLAGS) <linkflags>$(RPM_LD_FLAGS) ;
+%if 0%{with openmpi} || 0%{with mpich}
 using mpi ;
+%endif
 EOF
 
 cat >> python3-config.jam << EOF
@@ -732,8 +741,11 @@ echo ============================= build serial-py3 ==================
   --with-python --build-dir=serial-py3 variant=release threading=multi \
   debug-symbols=on pch=off python=%{python3_version} stage
 
+%if 0%{with openmpi} || 0%{with mpich}
 module purge ||:
+%endif
 
+%if 0%{with openmpi}
 %{_openmpi_load}
 echo ============================= build $MPI_COMPILER ==================
 ./b2 -d+2 -q %{?_smp_mflags} --with-mpi --with-graph_parallel \
@@ -748,7 +760,9 @@ echo ============================= build $MPI_COMPILER-py3 ==================
 
 %{_openmpi_unload}
 export PATH=/bin${PATH:+:}$PATH
+%endif
 
+%if 0%{with mpich}
 %{_mpich_load}
 echo ============================= build $MPI_COMPILER ==================
 ./b2 -d+2 -q %{?_smp_mflags} --with-mpi --with-graph_parallel \
@@ -763,6 +777,7 @@ echo ============================= build $MPI_COMPILER-py3 ==================
 
 %{_mpich_unload}
 export PATH=/bin${PATH:+:}$PATH
+%endif
 
 echo ============================= build Boost.Build ==================
 (cd tools/build
@@ -774,8 +789,12 @@ echo ============================= build Boost.Build ==================
 %install
 cd %{_builddir}/%{toplev_dirname}
 
+%if 0%{with openmpi} || 0%{with mpich}
 module purge ||:
+%endif
 
+
+%if 0%{with openmpi}
 %{_openmpi_load}
 echo ============================= install $MPI_COMPILER ==================
 ./b2 -q %{?_smp_mflags} --with-mpi --with-graph_parallel \
@@ -803,7 +822,9 @@ rm -f ${RPM_BUILD_ROOT}${MPI_HOME}/lib/libboost_{python,{w,}serialization}*
 
 %{_openmpi_unload}
 export PATH=/bin${PATH:+:}$PATH
+%endif
 
+%if 0%{with mpich}
 %{_mpich_load}
 echo ============================= install $MPI_COMPILER ==================
 ./b2 -q %{?_smp_mflags} --with-mpi --with-graph_parallel --build-dir=$MPI_COMPILER \
@@ -828,6 +849,7 @@ rm -f ${RPM_BUILD_ROOT}${MPI_HOME}/lib/libboost_{python,{w,}serialization}*
 
 %{_mpich_unload}
 export PATH=/bin${PATH:+:}$PATH
+%endif
 
 echo ============================= install serial ==================
 ./b2 -d+2 -q %{?_smp_mflags} --without-mpi --without-graph_parallel \
@@ -1092,10 +1114,15 @@ fi
 %{_includedir}/%{name}
 %{_libdir}/*.so
 %{_libdir}/*.a
+%if 0%{with mpich}
 %{_libdir}/mpich/lib/*.a
+%endif
+%if 0%{with openmpi}
 %{_libdir}/openmpi/lib/*.a
+%endif
 %doc %{boost_examplesdir}/*
 
+%if 0%{with openmpi}
 %files openmpi
 %license LICENSE_1_0.txt
 %{_libdir}/openmpi/lib/libboost_mpi.so.%{sonamever}
@@ -1127,7 +1154,9 @@ fi
 %files graph-openmpi
 %license LICENSE_1_0.txt
 %{_libdir}/openmpi/lib/libboost_graph_parallel.so.%{sonamever}
+%endif
 
+%if 0%{with mpich}
 %files mpich
 %license LICENSE_1_0.txt
 %{_libdir}/mpich/lib/libboost_mpi.so.%{sonamever}
@@ -1159,6 +1188,8 @@ fi
 %license LICENSE_1_0.txt
 %{_libdir}/mpich/lib/libboost_graph_parallel.so.%{sonamever}
 
+%endif
+
 %files build
 %license LICENSE_1_0.txt
 %{_datadir}/boost-build/
@@ -1174,5 +1205,11 @@ fi
 %{_mandir}/man1/bjam.1*
 
 %changelog
+* Mon Oct 28 2019 caomeng <caomeng5@huawei.com> - 1.66.0-16
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:add bcondwith openmpi and mpich
+
 * Wed Aug 28 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.66.0-15
 - Package init
